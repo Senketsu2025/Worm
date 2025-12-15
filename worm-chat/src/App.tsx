@@ -37,12 +37,6 @@ function LoginScreen({ onLogin }: { onLogin: (email: string) => void }) {
       return
     }
     
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(trimmedEmail)) {
-      setError('有効なメールアドレスを入力してください')
-      return
-    }
-    
     setError('')
     onLogin(trimmedEmail)
   }
@@ -63,7 +57,7 @@ function LoginScreen({ onLogin }: { onLogin: (email: string) => void }) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Input
-                type="email"
+                type="text"
                 placeholder="example@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
