@@ -1,0 +1,69 @@
+openapi: 3.0.1
+info:
+  title: WormChat API
+  description: WormChatがAIサービスと対話するためのAPIです。
+  version: 1.0.0
+servers:
+  - url: /api
+paths:
+  /PostWormAPI:
+    post:
+      summary: AIにチャットメッセージを送信する
+      description: このエンドポイントは、ユーザーのチャットメッセージを受け取り、AIサービスに転送し、AIの応答を返します。
+      operationId: PostWormAPI
+      requestBody:
+        description: チャットリクエストのペイロード
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WormChatRequest'
+      responses:
+        '200':
+          description: AIからの成功応答。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIResponse'
+        '400':
+          description: 不正なリクエスト。リクエストペイロードが無効です。
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["メールアドレスを空にすることはできません。"]
+        '502':
+          description: 不正なゲートウェイ。AIサービスとの通信中にエラーが発生しました。
+        '500':
+          description: 内部サーバーエラー。予期せぬエラーが発生しました。
+components:
+  schemas:
+    WormChatRequest:
+      type: object
+      required:
+        - mailAddress
+        - chatText
+      properties:
+        id:
+          type: string
+          description: 文脈を維持するための、前回の会話ターンのID（任意）。
+          nullable: true
+        mailAddress:
+          type: string
+          description: ユーザーのメールアドレス。
+          example: 'user@example.com'
+        chatText:
+          type: string
+          description: ユーザーのチャットメッセージ。
+          example: 'こんにちは、調子はどう？'
+    AIResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 会話ターンの一意な識別子。
+        outputText:
+          type: string
+          description: AIからの応答テキスト。
