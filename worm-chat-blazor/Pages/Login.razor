@@ -1,0 +1,72 @@
+@page "/login"
+@page "/"
+@using Blazored.LocalStorage
+@inject ILocalStorageService LocalStorage
+@inject NavigationManager Navigation
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="login-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+                </svg>
+            </div>
+            <h1 class="login-title">WormChat</h1>
+            <p class="login-description">AIアシスタントとチャットを始めるには、メールアドレスを入力してください</p>
+        </div>
+        <div class="login-content">
+            <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+                <div class="form-group">
+                    <input type="text" 
+                           class="form-control" 
+                           placeholder="example@email.com" 
+                           @bind="loginModel.Email" 
+                           @bind:event="oninput" />
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <p class="error-message">@errorMessage</p>
+                    }
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">ログイン</button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private string errorMessage = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var storedEmail = await LocalStorage.GetItemAsync<string>("wormchat_email");
+            if (!string.IsNullOrEmpty(storedEmail))
+            {
+                Navigation.NavigateTo("/chat");
+            }
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        var trimmedEmail = loginModel.Email?.Trim() ?? "";
+        
+        if (string.IsNullOrEmpty(trimmedEmail))
+        {
+            errorMessage = "メールアドレスを入力してください";
+            return;
+        }
+
+        errorMessage = "";
+        await LocalStorage.SetItemAsync("wormchat_email", trimmedEmail);
+        Navigation.NavigateTo("/chat");
+    }
+
+    private class LoginModel
+    {
+        public string Email { get; set; } = "";
+    }
+}
