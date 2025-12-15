@@ -6,6 +6,7 @@ import { Send, LogOut, MessageCircle, User, Bot } from 'lucide-react'
 import './App.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+const API_KEY = import.meta.env.VITE_API_KEY || ''
 
 interface Message {
   role: 'user' | 'assistant'
@@ -121,11 +122,17 @@ function ChatScreen({ email, onLogout }: { email: string; onLogout: () => void }
         requestBody.id = conversationId
       }
 
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+      
+      if (API_KEY) {
+        headers['x-functions-key'] = API_KEY
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/PostWormAPI`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(requestBody),
       })
 
