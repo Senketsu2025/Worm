@@ -1,0 +1,250 @@
+@page "/chat"
+@using Blazored.LocalStorage
+@using worm_chat_blazor.Models
+@using worm_chat_blazor.Services
+@using Markdig
+@inject ILocalStorageService LocalStorage
+@inject NavigationManager Navigation
+@inject WormChatService ChatService
+@inject IJSRuntime JSRuntime
+
+<div class="chat-container">
+    <header class="chat-header">
+        <div class="header-left">
+            <div class="header-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+                </svg>
+            </div>
+            <h1 class="header-title">WormChat</h1>
+        </div>
+        <div class="header-right">
+            <span class="user-email">@email</span>
+            <button class="btn btn-outline btn-sm" @onclick="StartNewConversation">新しい会話</button>
+            <button class="btn btn-ghost btn-icon" @onclick="HandleLogout" title="ログアウト">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="chat-main" @ref="chatMainRef">
+        <div class="messages-container">
+            @if (messages.Count == 0)
+            {
+                <div class="welcome-message">
+                    <div class="welcome-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 8V4H8"/>
+                            <rect width="16" height="12" x="4" y="8" rx="2"/>
+                            <path d="M2 14h2"/>
+                            <path d="M20 14h2"/>
+                            <path d="M15 13v2"/>
+                            <path d="M9 13v2"/>
+                        </svg>
+                    </div>
+                    <h2>WormChatへようこそ</h2>
+                    <p>メッセージを入力してAIアシスタントとの会話を始めましょう</p>
+                </div>
+            }
+
+            @foreach (var message in messages)
+            {
+                <div class="message-row @(message.Role == "user" ? "user-message" : "assistant-message")">
+                    @if (message.Role == "assistant")
+                    {
+                        <div class="avatar assistant-avatar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 8V4H8"/>
+                                <rect width="16" height="12" x="4" y="8" rx="2"/>
+                                <path d="M2 14h2"/>
+                                <path d="M20 14h2"/>
+                                <path d="M15 13v2"/>
+                                <path d="M9 13v2"/>
+                            </svg>
+                        </div>
+                    }
+                    <div class="message-bubble @(message.Role == "user" ? "user-bubble" : "assistant-bubble")">
+                        @if (message.Role == "user")
+                        {
+                            <p class="message-text">@message.Content</p>
+                        }
+                        else
+                        {
+                            <div class="markdown-content">@((MarkupString)RenderMarkdown(message.Content))</div>
+                        }
+                    </div>
+                    @if (message.Role == "user")
+                    {
+                        <div class="avatar user-avatar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (isLoading)
+            {
+                <div class="message-row assistant-message">
+                    <div class="avatar assistant-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 8V4H8"/>
+                            <rect width="16" height="12" x="4" y="8" rx="2"/>
+                            <path d="M2 14h2"/>
+                            <path d="M20 14h2"/>
+                            <path d="M15 13v2"/>
+                            <path d="M9 13v2"/>
+                        </svg>
+                    </div>
+                    <div class="message-bubble assistant-bubble">
+                        <div class="loading-dots">
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="error-banner">@errorMessage</div>
+            }
+
+            <div @ref="messagesEndRef"></div>
+        </div>
+    </main>
+
+    <footer class="chat-footer">
+        <form class="input-form" @onsubmit="SendMessage" @onsubmit:preventDefault>
+            <input type="text" 
+                   class="message-input" 
+                   placeholder="メッセージを入力..." 
+                   @bind="inputValue" 
+                   @bind:event="oninput"
+                   disabled="@isLoading" />
+            <button type="submit" class="btn btn-primary btn-send" disabled="@(isLoading || string.IsNullOrWhiteSpace(inputValue))">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+            </button>
+        </form>
+    </footer>
+</div>
+
+@code {
+    private string email = "";
+    private string inputValue = "";
+    private string errorMessage = "";
+    private bool isLoading = false;
+    private List<ChatMessage> messages = new();
+    private ElementReference chatMainRef;
+    private ElementReference messagesEndRef;
+    private static readonly MarkdownPipeline pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            email = await LocalStorage.GetItemAsync<string>("wormchat_email") ?? "";
+            if (string.IsNullOrEmpty(email))
+            {
+                Navigation.NavigateTo("/login");
+                return;
+            }
+            StateHasChanged();
+        }
+        
+        await ScrollToBottom();
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("scrollToBottom", messagesEndRef);
+        }
+        catch
+        {
+        }
+    }
+
+    private string RenderMarkdown(string markdown)
+    {
+        if (string.IsNullOrEmpty(markdown))
+            return "";
+        return Markdown.ToHtml(markdown, pipeline);
+    }
+
+    private async Task SendMessage()
+    {
+        var trimmedInput = inputValue?.Trim() ?? "";
+        if (string.IsNullOrEmpty(trimmedInput) || isLoading)
+            return;
+
+        var userMessage = new ChatMessage { Role = "user", Content = trimmedInput };
+        messages.Add(userMessage);
+        inputValue = "";
+        isLoading = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var conversationId = await LocalStorage.GetItemAsync<string>("wormchat_conversation_id");
+
+            var request = new WormChatRequest
+            {
+                Id = conversationId,
+                MailAddress = email,
+                ChatText = trimmedInput
+            };
+
+            var response = await ChatService.SendMessageAsync(request);
+
+            if (response != null)
+            {
+                if (!string.IsNullOrEmpty(response.Id))
+                {
+                    await LocalStorage.SetItemAsync("wormchat_conversation_id", response.Id);
+                }
+
+                var assistantMessage = new ChatMessage { Role = "assistant", Content = response.OutputText };
+                messages.Add(assistantMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        await LocalStorage.RemoveItemAsync("wormchat_email");
+        await LocalStorage.RemoveItemAsync("wormchat_conversation_id");
+        Navigation.NavigateTo("/login");
+    }
+
+    private async Task StartNewConversation()
+    {
+        await LocalStorage.RemoveItemAsync("wormchat_conversation_id");
+        messages.Clear();
+        errorMessage = "";
+        StateHasChanged();
+    }
+}
