@@ -8,6 +8,7 @@ import './App.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 const API_KEY = import.meta.env.VITE_API_KEY || ''
+const SESSION_TIMEOUT_MINUTES = parseInt(import.meta.env.VITE_SESSION_TIMEOUT_MINUTES || '1440', 10)
 
 interface Message {
   role: 'user' | 'assistant'
@@ -22,6 +23,27 @@ interface AIResponse {
 const STORAGE_KEYS = {
   EMAIL: 'wormchat_email',
   CONVERSATION_ID: 'wormchat_conversation_id',
+  LOGIN_AT: 'wormchat_login_at',
+}
+
+function isSessionExpired(): boolean {
+  const loginAt = localStorage.getItem(STORAGE_KEYS.LOGIN_AT)
+  if (!loginAt) return true
+  
+  const loginTime = parseInt(loginAt, 10)
+  if (isNaN(loginTime)) return true
+  
+  const now = Date.now()
+  if (now < loginTime) return true
+  
+  const elapsedMinutes = (now - loginTime) / (1000 * 60)
+  return elapsedMinutes > SESSION_TIMEOUT_MINUTES
+}
+
+function clearSession(): void {
+  localStorage.removeItem(STORAGE_KEYS.EMAIL)
+  localStorage.removeItem(STORAGE_KEYS.CONVERSATION_ID)
+  localStorage.removeItem(STORAGE_KEYS.LOGIN_AT)
 }
 
 function LoginScreen({ onLogin }: { onLogin: (email: string) => void }) {
@@ -159,8 +181,7 @@ function ChatScreen({ email, onLogout }: { email: string; onLogout: () => void }
   }
 
   const handleLogout = () => {
-    localStorage.removeItem(STORAGE_KEYS.EMAIL)
-    localStorage.removeItem(STORAGE_KEYS.CONVERSATION_ID)
+    clearSession()
     onLogout()
   }
 
@@ -290,17 +311,23 @@ function App() {
   useEffect(() => {
     const storedEmail = localStorage.getItem(STORAGE_KEYS.EMAIL)
     if (storedEmail) {
-      setEmail(storedEmail)
+      if (isSessionExpired()) {
+        clearSession()
+      } else {
+        setEmail(storedEmail)
+      }
     }
     setIsInitialized(true)
   }, [])
 
   const handleLogin = (userEmail: string) => {
     localStorage.setItem(STORAGE_KEYS.EMAIL, userEmail)
+    localStorage.setItem(STORAGE_KEYS.LOGIN_AT, Date.now().toString())
     setEmail(userEmail)
   }
 
   const handleLogout = () => {
+    clearSession()
     setEmail(null)
   }
 

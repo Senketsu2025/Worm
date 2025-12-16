@@ -237,6 +237,7 @@
     {
         await LocalStorage.RemoveItemAsync("wormchat_email");
         await LocalStorage.RemoveItemAsync("wormchat_conversation_id");
+        await LocalStorage.RemoveItemAsync("wormchat_login_at");
         Navigation.NavigateTo("/login");
     }
 
