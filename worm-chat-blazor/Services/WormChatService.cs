@@ -8,10 +8,10 @@ public class WormChatService
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
 
-    public WormChatService(HttpClient httpClient, IConfiguration configuration)
+    public WormChatService(HttpClient httpClient, AppSettings appSettings)
     {
         _httpClient = httpClient;
-        _apiKey = configuration["ApiKey"] ?? "";
+        _apiKey = appSettings.ApiKey;
     }
 
     public async Task<WormChatResponse?> SendMessageAsync(WormChatRequest request)

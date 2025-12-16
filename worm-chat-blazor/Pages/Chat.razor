@@ -7,7 +7,7 @@
 @inject NavigationManager Navigation
 @inject WormChatService ChatService
 @inject IJSRuntime JSRuntime
-@inject IConfiguration Configuration
+@inject AppSettings AppSettings
 
 <div class="chat-container">
     <header class="chat-header">
@@ -148,19 +148,9 @@
     private List<ChatMessage> messages = new();
     private ElementReference chatMainRef;
     private ElementReference messagesEndRef;
-    private int sessionTimeoutMinutes = 1440;
     private static readonly MarkdownPipeline pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
         .Build();
-
-    protected override void OnInitialized()
-    {
-        var configValue = Configuration["SessionTimeoutMinutes"];
-        if (!string.IsNullOrEmpty(configValue) && int.TryParse(configValue, out var timeout))
-        {
-            sessionTimeoutMinutes = timeout;
-        }
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -193,7 +183,7 @@
             return true;
 
         var elapsedMinutes = (now - loginAt) / (1000.0 * 60.0);
-        return elapsedMinutes > sessionTimeoutMinutes;
+        return elapsedMinutes > AppSettings.SessionTimeoutMinutes;
     }
 
     private async Task ClearSession()

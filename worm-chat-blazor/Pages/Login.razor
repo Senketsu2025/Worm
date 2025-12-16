@@ -1,9 +1,10 @@
 @page "/login"
 @page "/"
 @using Blazored.LocalStorage
+@using worm_chat_blazor.Models
 @inject ILocalStorageService LocalStorage
 @inject NavigationManager Navigation
-@inject IConfiguration Configuration
+@inject AppSettings AppSettings
 
 <div class="login-container">
     <div class="login-card">
@@ -38,16 +39,6 @@
 @code {
     private LoginModel loginModel = new();
     private string errorMessage = "";
-    private int sessionTimeoutMinutes = 1440;
-
-    protected override void OnInitialized()
-    {
-        var configValue = Configuration["SessionTimeoutMinutes"];
-        if (!string.IsNullOrEmpty(configValue) && int.TryParse(configValue, out var timeout))
-        {
-            sessionTimeoutMinutes = timeout;
-        }
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -82,7 +73,7 @@
             return true;
 
         var elapsedMinutes = (now - loginAt) / (1000.0 * 60.0);
-        return elapsedMinutes > sessionTimeoutMinutes;
+        return elapsedMinutes > AppSettings.SessionTimeoutMinutes;
     }
 
     private async Task ClearSession()
