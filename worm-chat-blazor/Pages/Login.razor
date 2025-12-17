@@ -1,8 +1,10 @@
 @page "/login"
 @page "/"
 @using Blazored.LocalStorage
+@using worm_chat_blazor.Models
 @inject ILocalStorageService LocalStorage
 @inject NavigationManager Navigation
+@inject AppSettings AppSettings
 
 <div class="login-container">
     <div class="login-card">
@@ -45,9 +47,40 @@
             var storedEmail = await LocalStorage.GetItemAsync<string>("wormchat_email");
             if (!string.IsNullOrEmpty(storedEmail))
             {
-                Navigation.NavigateTo("/chat");
+                if (await IsSessionExpired())
+                {
+                    await ClearSession();
+                }
+                else
+                {
+                    Navigation.NavigateTo("/chat");
+                }
             }
         }
+    }
+
+    private async Task<bool> IsSessionExpired()
+    {
+        var loginAtStr = await LocalStorage.GetItemAsync<string>("wormchat_login_at");
+        if (string.IsNullOrEmpty(loginAtStr))
+            return true;
+
+        if (!long.TryParse(loginAtStr, out var loginAt))
+            return true;
+
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        if (now < loginAt)
+            return true;
+
+        var elapsedMinutes = (now - loginAt) / (1000.0 * 60.0);
+        return elapsedMinutes > AppSettings.SessionTimeoutMinutes;
+    }
+
+    private async Task ClearSession()
+    {
+        await LocalStorage.RemoveItemAsync("wormchat_email");
+        await LocalStorage.RemoveItemAsync("wormchat_conversation_id");
+        await LocalStorage.RemoveItemAsync("wormchat_login_at");
     }
 
     private async Task HandleLogin()
@@ -62,6 +95,7 @@
 
         errorMessage = "";
         await LocalStorage.SetItemAsync("wormchat_email", trimmedEmail);
+        await LocalStorage.SetItemAsync("wormchat_login_at", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
         Navigation.NavigateTo("/chat");
     }
 

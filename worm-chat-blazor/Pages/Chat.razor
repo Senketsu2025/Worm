@@ -7,6 +7,7 @@
 @inject NavigationManager Navigation
 @inject WormChatService ChatService
 @inject IJSRuntime JSRuntime
+@inject AppSettings AppSettings
 
 <div class="chat-container">
     <header class="chat-header">
@@ -156,8 +157,9 @@
         if (firstRender)
         {
             email = await LocalStorage.GetItemAsync<string>("wormchat_email") ?? "";
-            if (string.IsNullOrEmpty(email))
+            if (string.IsNullOrEmpty(email) || await IsSessionExpired())
             {
+                await ClearSession();
                 Navigation.NavigateTo("/login");
                 return;
             }
@@ -165,6 +167,30 @@
         }
         
         await ScrollToBottom();
+    }
+
+    private async Task<bool> IsSessionExpired()
+    {
+        var loginAtStr = await LocalStorage.GetItemAsync<string>("wormchat_login_at");
+        if (string.IsNullOrEmpty(loginAtStr))
+            return true;
+
+        if (!long.TryParse(loginAtStr, out var loginAt))
+            return true;
+
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        if (now < loginAt)
+            return true;
+
+        var elapsedMinutes = (now - loginAt) / (1000.0 * 60.0);
+        return elapsedMinutes > AppSettings.SessionTimeoutMinutes;
+    }
+
+    private async Task ClearSession()
+    {
+        await LocalStorage.RemoveItemAsync("wormchat_email");
+        await LocalStorage.RemoveItemAsync("wormchat_conversation_id");
+        await LocalStorage.RemoveItemAsync("wormchat_login_at");
     }
 
     private async Task ScrollToBottom()
@@ -235,8 +261,7 @@
 
     private async Task HandleLogout()
     {
-        await LocalStorage.RemoveItemAsync("wormchat_email");
-        await LocalStorage.RemoveItemAsync("wormchat_conversation_id");
+        await ClearSession();
         Navigation.NavigateTo("/login");
     }
 
