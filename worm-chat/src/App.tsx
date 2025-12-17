@@ -212,7 +212,7 @@ function ChatScreen({ email, onLogout }: { email: string; onLogout: () => void }
       </header>
 
       <main className="flex-1 overflow-y-auto p-4">
-        <div className="max-w-3xl mx-auto space-y-4">
+        <div className="w-[80%] max-w-6xl mx-auto space-y-4">
           {messages.length === 0 && (
             <div className="text-center py-12">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-700">
@@ -286,7 +286,7 @@ function ChatScreen({ email, onLogout }: { email: string; onLogout: () => void }
       </main>
 
       <footer className="p-4 bg-white dark:bg-zinc-800 border-t border-zinc-200 dark:border-zinc-700">
-        <form onSubmit={sendMessage} className="max-w-3xl mx-auto flex gap-2">
+        <form onSubmit={sendMessage} className="w-[80%] max-w-6xl mx-auto flex gap-2">
           <Input
             type="text"
             placeholder="メッセージを入力..."

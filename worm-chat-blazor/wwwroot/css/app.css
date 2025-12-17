@@ -228,7 +228,8 @@ html, body {
 }
 
 .messages-container {
-    max-width: 48rem;
+    width: 80%;
+    max-width: 72rem;
     margin: 0 auto;
 }
 
@@ -432,7 +433,8 @@ html, body {
 }
 
 .input-form {
-    max-width: 48rem;
+    width: 80%;
+    max-width: 72rem;
     margin: 0 auto;
     display: flex;
     gap: 0.5rem;
